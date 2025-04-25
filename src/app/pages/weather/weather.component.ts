@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import { ApiServiceService } from '../../api-service.service'; // Adjust path as needed
 import { Weather } from "../../models/weather";
+import { GoogleSignInFedcmComponent } from '../../google-sign-in-fedcm-component/google-sign-in-fedcm-component.component';
 
 @Component({
   selector: 'app-weather',
-  imports: [],
+  imports: [GoogleSignInFedcmComponent],
   templateUrl: './weather.component.html',
   styleUrl: './weather.component.scss'
 })
