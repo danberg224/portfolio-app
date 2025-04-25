@@ -12,7 +12,6 @@ export class GoogleSignInFedcmComponent implements OnInit {
   ngOnInit(): void {
     this.googleAuthService.initialize();
     this.googleAuthService.googleButton('google-signin-button');
-    this.googleAuthService.prompt();
 
   }
 }

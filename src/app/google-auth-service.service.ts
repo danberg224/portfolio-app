@@ -1,4 +1,5 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Router } from '@angular/router';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { jwtDecode } from 'jwt-decode'; // npm install jwt-decode
 
 declare const google: any;
@@ -7,25 +8,43 @@ declare const google: any;
   providedIn: 'root'
 })
 export class GoogleAuthServiceService {
-
-  constructor(private ngZone: NgZone) { 
-  }
+  private ngZone = inject(NgZone);
+  private router = inject(Router);
 
   initialize(): void {
+    console.log("Initialized");
     google.accounts.id.initialize({
       client_id: '557879449612-ovo7s6nlvrqaackqu2l4jm64nkurhg0m.apps.googleusercontent.com', // Replace with your Client ID
       callback: (response: any) => this.handleCredentialResponse(response),
       //use_fedcm_for_prompt: true, // Explicitly enable FedCM for One Tap
       scope: 'openid profile email', // Ensure 'openid' is included
+      ux_mode: 'popup'
     });
   }
-  prompt(): void {
-    var token = this.getToken();
-    if (this.isTokenExpired(this.getToken())){
-      google.accounts.id.prompt(); // Optional: To show the One Tap prompt
+  getEmail(): string {
+    const token = this.getToken();
+    if (!token) return '';
+  
+    try {
+      const decoded: any = jwtDecode(token);
+      return decoded.email || '';
+    } catch (e) {
+      console.error('Failed to decode token:', e);
+      return '';
     }
   }
+  logout(): void {
+    // 1. Clear the saved token
+    localStorage.removeItem('google_id_token');
 
+    // 2. Optional: revoke the token at Google (recommended for full logout)
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+      google.accounts.id.disableAutoSelect();
+    }
+
+    // 3. Redirect to login page
+    this.router.navigate(['/login']);
+  }
   googleButton(id: string): void {
     google.accounts.id.renderButton(
       document.getElementById(id),
@@ -36,7 +55,8 @@ export class GoogleAuthServiceService {
       }
     );
   }
-  isTokenExpired(token: string): boolean {
+  isTokenExpired(): boolean {
+    let token: string = this.getToken();
     if (token == ""){
       return true;
     }
@@ -62,18 +82,11 @@ export class GoogleAuthServiceService {
     console.log('Decoded Token:', decodedToken);
     localStorage.setItem('google_id_token', token);
 
-    // Send the ID token to your .NET Web API for verification
-    // Example using Angular HttpClient:
-    // this.http.post('YOUR_BACKEND_API_ENDPOINT/auth/google', { token })
-    //   .subscribe({
-    //     next: (res) => {
-    //       this.ngZone.run(() => {
-    //         // Handle successful authentication
-    //       });
-    //     },
-    //     error: (err) => {
-    //       console.error('Google Sign-In Error:', err);
-    //     },
-    //   });
+    // After saving token, redirect user
+    this.ngZone.run(() => {
+      const redirectUrl = localStorage.getItem('redirectAfterLogin') || '/';
+      localStorage.removeItem('redirectAfterLogin'); // Clean up
+      window.location.href = redirectUrl; // or use router if inside Angular
+    });
   }
 }
